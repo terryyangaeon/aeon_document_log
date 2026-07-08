@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Staff {
+  id       Int     @id @default(autoincrement())
+  name     String  @db.VarChar(100)
+  initial  String  @db.VarChar(10)
+  staffNo  String  @db.VarChar(10) @map("staff_no")
+  email    String  @db.VarChar(50)
+  isActive Boolean @default(true) @map("is_active")
+
+  sentDocuments    DocumentLog[] @relation("Sender")
+  draftedDocuments DocumentLog[] @relation("DraftedBy")
+
+  @@map("staff")
+}
+
+model DocumentLog {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @db.Date
+  prefix      String   @db.VarChar(20)
+  senderId    Int      @map("sender_id")
+  sequence    Int
+  draftedById Int      @map("drafted_by_id")
+  reference   String   @unique @db.VarChar(50)
+  sendTo      String   @db.VarChar(100) @map("send_to")
+  description String   @db.VarChar(100)
+  remarks     String?  @db.VarChar(100)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  sender    Staff @relation("Sender", fields: [senderId], references: [id])
+  draftedBy Staff @relation("DraftedBy", fields: [draftedById], references: [id])
+
+  @@map("document_log")
+}
+
+model SystemCode {
+  id    Int    @id @default(autoincrement())
+  type  String @db.VarChar(20)
+  value String @db.VarChar(20)
+
+  @@map("system_code")
+}

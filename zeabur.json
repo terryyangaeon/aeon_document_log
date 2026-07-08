@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schema.zeabur.app/template.json",
+  "name": "AEON Document Log",
+  "description": "Document reference number management system with Microsoft SSO",
+  "services": [
+    {
+      "name": "web",
+      "template": "NEXTJS",
+      "domainKey": "web",
+      "env": {
+        "DATABASE_URL": {
+          "default": "${POSTGRES_CONNECTION_STRING}",
+          "expose": true
+        },
+        "NEXTAUTH_URL": {
+          "default": "${ZEABUR_WEB_URL}",
+          "expose": true
+        },
+        "NEXTAUTH_SECRET": {
+          "default": "",
+          "expose": true
+        },
+        "AZURE_AD_CLIENT_ID": {
+          "default": "",
+          "expose": true
+        },
+        "AZURE_AD_CLIENT_SECRET": {
+          "default": "",
+          "expose": true
+        },
+        "AZURE_AD_TENANT_ID": {
+          "default": "",
+          "expose": true
+        }
+      }
+    },
+    {
+      "name": "postgres",
+      "template": "POSTGRESQL",
+      "env": {
+        "POSTGRES_DB": {
+          "default": "DocumentLog"
+        }
+      }
+    }
+  ]
+}
