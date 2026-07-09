@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/api-auth";
+import { requireAuth, requireAdmin } from "@/lib/api-auth";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await requireAuth();
-  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session) return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
 
   const body = await request.json();
   const code = await prisma.systemCode.create({
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const session = await requireAuth();
-  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session) return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
 
   const body = await request.json();
   const code = await prisma.systemCode.update({
@@ -46,8 +46,8 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const session = await requireAuth();
-  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session) return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const id = parseInt(searchParams.get("id") || "0");

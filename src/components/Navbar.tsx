@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/log-sheet", label: "Log Sheet" },
@@ -14,6 +15,18 @@ const navItems = [
 export default function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (session?.user) {
+      fetch("/api/accounts/check-role")
+        .then((res) => res.json())
+        .then((data) => setIsAdmin(data.role === "admin"))
+        .catch(() => setIsAdmin(false));
+    } else {
+      setIsAdmin(false);
+    }
+  }, [session]);
 
   return (
     <nav className="bg-[#1e3a5f] text-white shadow-lg">
@@ -46,6 +59,18 @@ export default function Navbar() {
                     {item.label}
                   </Link>
                 ))}
+                {isAdmin && (
+                  <Link
+                    href="/accounts"
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      pathname === "/accounts"
+                        ? "bg-white/20 text-white"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    Account Management
+                  </Link>
+                )}
               </div>
             )}
           </div>

@@ -19,9 +19,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/",
   },
   callbacks: {
+    async jwt({ token, user }) {
+      if (user?.email) {
+        const appUser = await prisma.appUser.findUnique({
+          where: { email: user.email },
+        });
+        token.role = appUser?.isActive ? appUser.role : "user";
+      }
+      return token;
+    },
     async session({ session, token }) {
       if (token?.sub) {
         session.user.id = token.sub;
+      }
+      if (token?.role) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (session.user as any).role = token.role;
       }
       return session;
     },

@@ -7,3 +7,15 @@ export async function requireAuth() {
   }
   return session;
 }
+
+export async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user) {
+    return null;
+  }
+  const role = (session as { user: { role?: string } }).user.role;
+  if (role !== "admin") {
+    return null;
+  }
+  return session;
+}

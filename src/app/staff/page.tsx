@@ -20,6 +20,7 @@ export default function StaffPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   async function fetchStaff() {
     const res = await fetch("/api/staff");
@@ -29,6 +30,10 @@ export default function StaffPage() {
 
   useEffect(() => {
     fetchStaff();
+    fetch("/api/accounts/check-role")
+      .then((res) => res.json())
+      .then((data) => setIsAdmin(data.role === "admin"))
+      .catch(() => setIsAdmin(false));
   }, []);
 
   function startEdit(staff: Staff) {
@@ -93,12 +98,14 @@ export default function StaffPage() {
     <div className="max-w-5xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1e3a5f]">Staff Records</h1>
-        <button
-          onClick={() => (showForm ? cancelForm() : setShowForm(true))}
-          className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors font-medium"
-        >
-          {showForm ? "Cancel" : "+ Add Staff"}
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => (showForm ? cancelForm() : setShowForm(true))}
+            className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors font-medium"
+          >
+            {showForm ? "Cancel" : "+ Add Staff"}
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -213,18 +220,24 @@ export default function StaffPage() {
                   <td className="px-4 py-3">{s.staffNo}</td>
                   <td className="px-4 py-3">{s.email}</td>
                   <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => startEdit(s)}
-                      className="text-blue-600 hover:text-blue-800 mr-3 text-sm font-medium"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeactivate(s.id)}
-                      className="text-red-500 hover:text-red-700 text-sm font-medium"
-                    >
-                      Deactivate
-                    </button>
+                    {isAdmin ? (
+                      <>
+                        <button
+                          onClick={() => startEdit(s)}
+                          className="text-blue-600 hover:text-blue-800 mr-3 text-sm font-medium"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeactivate(s.id)}
+                          className="text-red-500 hover:text-red-700 text-sm font-medium"
+                        >
+                          Deactivate
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-gray-400 text-sm">View only</span>
+                    )}
                   </td>
                 </tr>
               ))
