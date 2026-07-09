@@ -3,6 +3,9 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
+# Copy prisma schema so postinstall (prisma generate) can run
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 RUN npm ci
 
 # ---- Stage 2: Build the application ----
