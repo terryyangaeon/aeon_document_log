@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/api-auth";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(request.url);
   const year = searchParams.get("year");
   const page = parseInt(searchParams.get("page") || "1");
@@ -31,6 +34,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await request.json();
   const docDate = new Date(body.date);
   const year = docDate.getFullYear();
@@ -83,6 +89,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const id = parseInt(searchParams.get("id") || "0");
   await prisma.documentLog.delete({ where: { id } });

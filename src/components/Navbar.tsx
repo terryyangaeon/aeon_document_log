@@ -31,21 +31,23 @@ export default function Navbar() {
               />
               AEON Document Log
             </Link>
-            <div className="hidden md:flex gap-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname === item.href
-                      ? "bg-white/20 text-white"
-                      : "text-white/80 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+            {session?.user && (
+              <div className="hidden md:flex gap-1">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      pathname === item.href
+                        ? "bg-white/20 text-white"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-4">
             {session?.user ? (

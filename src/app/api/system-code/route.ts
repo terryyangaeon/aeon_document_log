@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/api-auth";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
 
@@ -14,6 +17,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await request.json();
   const code = await prisma.systemCode.create({
     data: {
@@ -25,6 +31,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await request.json();
   const code = await prisma.systemCode.update({
     where: { id: body.id },
@@ -37,6 +46,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const id = parseInt(searchParams.get("id") || "0");
   await prisma.systemCode.delete({ where: { id } });
