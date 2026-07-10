@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
+import SearchableSelect from "@/components/SearchableSelect";
 
 interface Staff {
   id: number;
@@ -104,6 +105,11 @@ export default function LogSheetPage() {
 
   const totalPages = Math.max(1, Math.ceil(logs.length / pageSize));
   const paginatedLogs = logs.slice((page - 1) * pageSize, page * pageSize);
+
+  const staffOptions = useMemo(
+    () => staffList.map((s) => ({ value: String(s.id), label: s.name })),
+    [staffList]
+  );
 
   const prefix = prefixes.length > 0 ? prefixes[0].value : "---";
   const selectedSender = staffList.find((s) => s.id === parseInt(form.senderId));
@@ -303,32 +309,20 @@ export default function LogSheetPage() {
                     />
                   </td>
                   <td className="px-4 py-2">
-                    <select
+                    <SearchableSelect
+                      options={staffOptions}
                       value={form.senderId}
-                      onChange={(e) => setForm({ ...form, senderId: e.target.value })}
+                      onChange={(v) => setForm({ ...form, senderId: v })}
                       className={`${baseInput} ${reqBorder(form.senderId, addTouched)}`}
-                    >
-                      <option value="">-- Select --</option>
-                      {staffList.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </td>
                   <td className="px-4 py-2">
-                    <select
+                    <SearchableSelect
+                      options={staffOptions}
                       value={form.draftedById}
-                      onChange={(e) => setForm({ ...form, draftedById: e.target.value })}
+                      onChange={(v) => setForm({ ...form, draftedById: v })}
                       className={`${baseInput} ${reqBorder(form.draftedById, addTouched)}`}
-                    >
-                      <option value="">-- Select --</option>
-                      {staffList.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </td>
                   <td className="px-4 py-2">
                     <input
@@ -412,30 +406,20 @@ export default function LogSheetPage() {
                           })}
                         </td>
                         <td className="px-4 py-2">
-                          <select
+                          <SearchableSelect
+                            options={staffOptions}
                             value={editForm.senderId}
-                            onChange={(e) => setEditForm({ ...editForm, senderId: e.target.value })}
+                            onChange={(v) => setEditForm({ ...editForm, senderId: v })}
                             className={`${baseInput} ${reqBorder(editForm.senderId, editTouched)}`}
-                          >
-                            {staffList.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
+                          />
                         </td>
                         <td className="px-4 py-2">
-                          <select
+                          <SearchableSelect
+                            options={staffOptions}
                             value={editForm.draftedById}
-                            onChange={(e) => setEditForm({ ...editForm, draftedById: e.target.value })}
+                            onChange={(v) => setEditForm({ ...editForm, draftedById: v })}
                             className={`${baseInput} ${reqBorder(editForm.draftedById, editTouched)}`}
-                          >
-                            {staffList.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
+                          />
                         </td>
                         <td className="px-4 py-2">
                           <input
