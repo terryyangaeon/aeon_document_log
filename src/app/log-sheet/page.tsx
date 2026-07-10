@@ -39,14 +39,24 @@ export default function LogSheetPage() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [prefixes, setPrefixes] = useState<SystemCode[]>([]);
   const [years, setYears] = useState<number[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   const [form, setForm] = useState({
+    senderId: "",
+    draftedById: "",
+    sendTo: "",
+    description: "",
+    remarks: "",
+  });
+
+  const [editForm, setEditForm] = useState({
     senderId: "",
     draftedById: "",
     sendTo: "",
@@ -72,10 +82,12 @@ export default function LogSheetPage() {
       fetch("/api/staff").then((r) => r.json()),
       fetch("/api/system-code?type=PREFIX").then((r) => r.json()),
       fetch("/api/document-log/years").then((r) => r.json()),
-    ]).then(([staff, codes, yrs]) => {
+      fetch("/api/accounts/check-role").then((r) => r.json()).catch(() => ({ role: "user" })),
+    ]).then(([staff, codes, yrs, roleData]) => {
       setStaffList(staff);
       setPrefixes(codes);
       setYears(yrs);
+      setIsAdmin(roleData.role === "admin");
       setLoading(false);
     });
   }, []);
@@ -100,6 +112,7 @@ export default function LogSheetPage() {
 
   function startAdding() {
     setIsAdding(true);
+    setEditingId(null);
     setForm({
       senderId: "",
       draftedById: "",
@@ -107,10 +120,27 @@ export default function LogSheetPage() {
       description: "",
       remarks: "",
     });
+    setPage(1);
   }
 
   function cancelAdding() {
     setIsAdding(false);
+  }
+
+  function startEditing(log: DocumentLog) {
+    setEditingId(log.id);
+    setIsAdding(false);
+    setEditForm({
+      senderId: String(log.senderId),
+      draftedById: String(log.draftedById),
+      sendTo: log.sendTo,
+      description: log.description,
+      remarks: log.remarks || "",
+    });
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
   }
 
   async function handleInlineSave() {
@@ -148,6 +178,40 @@ export default function LogSheetPage() {
     }
   }
 
+  async function handleEditSave(id: number) {
+    if (!editForm.senderId || !editForm.draftedById || !editForm.sendTo || !editForm.description) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/document-log", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          senderId: parseInt(editForm.senderId),
+          draftedById: parseInt(editForm.draftedById),
+          sendTo: editForm.sendTo,
+          description: editForm.description,
+          remarks: editForm.remarks,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || "Failed to update document log");
+        return;
+      }
+      toast.success("Document updated");
+      setEditingId(null);
+      fetchLogs();
+    } catch {
+      toast.error("Failed to update document log");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -164,24 +228,35 @@ export default function LogSheetPage() {
 
   const inputClass =
     "w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent";
+  const colCount = 7 + (isAdmin ? 1 : 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1e3a5f]">Document Log Sheet</h1>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600">Year:</label>
-          <select
-            value={filterYear}
-            onChange={(e) => setFilterYear(e.target.value)}
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
-          >
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+        <div className="flex items-center gap-3">
+          {!isAdding && (
+            <button
+              onClick={startAdding}
+              className="px-4 py-1.5 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors text-sm font-medium"
+            >
+              Get New Ref No.
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-600">Year:</label>
+            <select
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -197,44 +272,10 @@ export default function LogSheetPage() {
                 <th className="px-4 py-3 text-left font-medium">Document Description</th>
                 <th className="px-4 py-3 text-left font-medium">Remarks</th>
                 <th className="px-4 py-3 text-left font-medium">Reference No.</th>
-                {isAdding && <th className="px-4 py-3 text-left font-medium w-20"></th>}
+                {isAdmin && <th className="px-4 py-3 text-center font-medium w-24">Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {paginatedLogs.length === 0 && !isAdding ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
-                    No document logs found for {filterYear}
-                  </td>
-                </tr>
-              ) : (
-                paginatedLogs.map((log, i) => (
-                  <tr
-                    key={log.id}
-                    className={`border-t border-gray-100 ${
-                      i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                    } hover:bg-blue-50/50 transition-colors`}
-                  >
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {new Date(log.date).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      })}
-                    </td>
-                    <td className="px-4 py-3">{log.sender.name}</td>
-                    <td className="px-4 py-3">{log.draftedBy.name}</td>
-                    <td className="px-4 py-3">{log.sendTo}</td>
-                    <td className="px-4 py-3">{log.description}</td>
-                    <td className="px-4 py-3 text-gray-500">{log.remarks || "-"}</td>
-                    <td className="px-4 py-3 font-mono font-semibold text-[#1e3a5f]">
-                      {log.reference}
-                    </td>
-                    {isAdding && <td></td>}
-                  </tr>
-                ))
-              )}
-
               {isAdding && (
                 <tr className="border-t-2 border-[#1e3a5f]/30 bg-blue-50/70">
                   <td className="px-4 py-2">
@@ -308,50 +349,203 @@ export default function LogSheetPage() {
                       {previewRef}
                     </div>
                   </td>
-                  <td className="px-2 py-2">
-                    <div className="flex gap-1">
-                      <button
-                        onClick={handleInlineSave}
-                        disabled={submitting}
-                        className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                        title="Save"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={cancelAdding}
-                        className="p-1.5 bg-gray-400 text-white rounded hover:bg-gray-500"
-                        title="Cancel"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
+                  {isAdmin && (
+                    <td className="px-2 py-2">
+                      <div className="flex gap-1 justify-center">
+                        <button
+                          onClick={handleInlineSave}
+                          disabled={submitting}
+                          className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                          title="Save"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={cancelAdding}
+                          className="p-1.5 bg-gray-400 text-white rounded hover:bg-gray-500"
+                          title="Cancel"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                  {!isAdmin && (
+                    <td className="px-2 py-2">
+                      <div className="flex gap-1">
+                        <button
+                          onClick={handleInlineSave}
+                          disabled={submitting}
+                          className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                          title="Save"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={cancelAdding}
+                          className="p-1.5 bg-gray-400 text-white rounded hover:bg-gray-500"
+                          title="Cancel"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              )}
+
+              {paginatedLogs.length === 0 && !isAdding ? (
+                <tr>
+                  <td colSpan={colCount} className="px-4 py-8 text-center text-gray-400">
+                    No document logs found for {filterYear}
                   </td>
                 </tr>
+              ) : (
+                paginatedLogs.map((log, i) => {
+                  const isEditing = editingId === log.id;
+
+                  if (isEditing) {
+                    return (
+                      <tr key={log.id} className="border-t border-gray-100 bg-yellow-50/70">
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {new Date(log.date).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="px-4 py-2">
+                          <select
+                            value={editForm.senderId}
+                            onChange={(e) => setEditForm({ ...editForm, senderId: e.target.value })}
+                            className={inputClass}
+                          >
+                            {staffList.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-2">
+                          <select
+                            value={editForm.draftedById}
+                            onChange={(e) => setEditForm({ ...editForm, draftedById: e.target.value })}
+                            className={inputClass}
+                          >
+                            {staffList.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={editForm.sendTo}
+                            onChange={(e) => setEditForm({ ...editForm, sendTo: e.target.value })}
+                            maxLength={100}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={editForm.description}
+                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                            maxLength={100}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={editForm.remarks}
+                            onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
+                            maxLength={100}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-4 py-2 font-mono font-semibold text-[#1e3a5f]">
+                          {log.reference}
+                        </td>
+                        <td className="px-2 py-2">
+                          <div className="flex gap-1 justify-center">
+                            <button
+                              onClick={() => handleEditSave(log.id)}
+                              disabled={submitting}
+                              className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                              title="Save"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="p-1.5 bg-gray-400 text-white rounded hover:bg-gray-500"
+                              title="Cancel"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return (
+                    <tr
+                      key={log.id}
+                      className={`border-t border-gray-100 ${
+                        i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                      } hover:bg-blue-50/50 transition-colors`}
+                    >
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {new Date(log.date).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="px-4 py-3">{log.sender.name}</td>
+                      <td className="px-4 py-3">{log.draftedBy.name}</td>
+                      <td className="px-4 py-3">{log.sendTo}</td>
+                      <td className="px-4 py-3">{log.description}</td>
+                      <td className="px-4 py-3 text-gray-500">{log.remarks || "-"}</td>
+                      <td className="px-4 py-3 font-mono font-semibold text-[#1e3a5f]">
+                        {log.reference}
+                      </td>
+                      {isAdmin && (
+                        <td className="px-2 py-3 text-center">
+                          <button
+                            onClick={() => startEditing(log)}
+                            className="px-3 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/50">
-          <div className="flex items-center gap-2">
-            {!isAdding && (
-              <button
-                onClick={startAdding}
-                className="w-8 h-8 flex items-center justify-center bg-[#1e3a5f] text-white rounded hover:bg-[#2d5a8e] transition-colors"
-                title="Add new document"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-              </button>
-            )}
-          </div>
-
+        <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200 bg-gray-50/50">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <span>Rows per page:</span>

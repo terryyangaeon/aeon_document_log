@@ -88,6 +88,30 @@ export async function POST(request: NextRequest) {
   return Response.json(doc, { status: 201 });
 }
 
+export async function PUT(request: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await request.json();
+  const { id, senderId, draftedById, sendTo, description, remarks } = body;
+
+  if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
+
+  const doc = await prisma.documentLog.update({
+    where: { id },
+    data: {
+      senderId,
+      draftedById,
+      sendTo,
+      description,
+      remarks: remarks || null,
+    },
+    include: { sender: true, draftedBy: true },
+  });
+
+  return Response.json(doc);
+}
+
 export async function DELETE(request: NextRequest) {
   const session = await requireAuth();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
