@@ -35,7 +35,7 @@ export default function Home() {
           onClick={() => signIn("microsoft-entra-id")}
           className="px-6 py-3 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors font-medium"
         >
-          Sign In with Microsoft
+          Sign In
         </button>
       </div>
     </div>

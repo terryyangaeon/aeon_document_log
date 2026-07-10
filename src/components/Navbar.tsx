@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 const navItems = [
   { href: "/log-sheet", label: "Log Sheet" },
   { href: "/staff", label: "Staff Records" },
-  { href: "/configuration", label: "Configuration" },
+  { href: "/configuration", label: "Configuration", adminOnly: true },
 ];
 
 export default function Navbar() {
@@ -46,7 +46,9 @@ export default function Navbar() {
             </Link>
             {session?.user && (
               <div className="hidden md:flex gap-1">
-                {navItems.map((item) => (
+                {navItems
+                  .filter((item) => !item.adminOnly || isAdmin)
+                  .map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
@@ -92,7 +94,7 @@ export default function Navbar() {
                 onClick={() => signIn("microsoft-entra-id")}
                 className="px-4 py-1.5 text-sm bg-white/10 hover:bg-white/20 rounded-md transition-colors"
               >
-                Sign In with Microsoft
+                Sign In
               </button>
             )}
           </div>
