@@ -34,6 +34,10 @@ interface DocumentLog {
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
+function reqBorder(value: string, submitted: boolean) {
+  return submitted && !value ? "border-2 border-red-500" : "border border-gray-300";
+}
+
 export default function LogSheetPage() {
   const [logs, setLogs] = useState<DocumentLog[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
@@ -47,6 +51,8 @@ export default function LogSheetPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [addTouched, setAddTouched] = useState(false);
+  const [editTouched, setEditTouched] = useState(false);
 
   const [form, setForm] = useState({
     senderId: "",
@@ -113,6 +119,7 @@ export default function LogSheetPage() {
   function startAdding() {
     setIsAdding(true);
     setEditingId(null);
+    setAddTouched(false);
     setForm({
       senderId: "",
       draftedById: "",
@@ -125,11 +132,13 @@ export default function LogSheetPage() {
 
   function cancelAdding() {
     setIsAdding(false);
+    setAddTouched(false);
   }
 
   function startEditing(log: DocumentLog) {
     setEditingId(log.id);
     setIsAdding(false);
+    setEditTouched(false);
     setEditForm({
       senderId: String(log.senderId),
       draftedById: String(log.draftedById),
@@ -141,9 +150,11 @@ export default function LogSheetPage() {
 
   function cancelEditing() {
     setEditingId(null);
+    setEditTouched(false);
   }
 
   async function handleInlineSave() {
+    setAddTouched(true);
     if (!form.senderId || !form.draftedById || !form.sendTo || !form.description) {
       toast.error("Please fill in all required fields");
       return;
@@ -169,6 +180,7 @@ export default function LogSheetPage() {
       const doc = await res.json();
       toast.success(`Document created: ${doc.reference}`);
       setIsAdding(false);
+      setAddTouched(false);
       fetchLogs();
       fetchYears();
     } catch {
@@ -179,6 +191,7 @@ export default function LogSheetPage() {
   }
 
   async function handleEditSave(id: number) {
+    setEditTouched(true);
     if (!editForm.senderId || !editForm.draftedById || !editForm.sendTo || !editForm.description) {
       toast.error("Please fill in all required fields");
       return;
@@ -204,6 +217,7 @@ export default function LogSheetPage() {
       }
       toast.success("Document updated");
       setEditingId(null);
+      setEditTouched(false);
       fetchLogs();
     } catch {
       toast.error("Failed to update document log");
@@ -226,8 +240,7 @@ export default function LogSheetPage() {
     year: "numeric",
   });
 
-  const inputClass =
-    "w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent";
+  const baseInput = "w-full rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent";
   const colCount = 7 + (isAdmin ? 1 : 0);
 
   return (
@@ -238,9 +251,12 @@ export default function LogSheetPage() {
           {!isAdding && (
             <button
               onClick={startAdding}
-              className="px-4 py-1.5 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors text-sm font-medium"
+              className="w-8 h-8 flex items-center justify-center bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors"
+              title="Get New Ref No."
             >
-              Get New Ref No.
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
             </button>
           )}
           <div className="flex items-center gap-2">
@@ -262,7 +278,7 @@ export default function LogSheetPage() {
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ lineHeight: "1.1" }}>
             <thead>
               <tr className="bg-[#1e3a5f] text-white">
                 <th className="px-4 py-3 text-left font-medium w-28">Date</th>
@@ -277,20 +293,20 @@ export default function LogSheetPage() {
             </thead>
             <tbody>
               {isAdding && (
-                <tr className="border-t-2 border-[#1e3a5f]/30 bg-blue-50/70">
+                <tr className="border-t-2 border-[#1e3a5f]/30 bg-blue-50/70 align-top">
                   <td className="px-4 py-2">
                     <input
                       type="text"
                       value={todayFormatted}
                       disabled
-                      className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full border border-gray-200 rounded px-2 py-1 text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
                     />
                   </td>
                   <td className="px-4 py-2">
                     <select
                       value={form.senderId}
                       onChange={(e) => setForm({ ...form, senderId: e.target.value })}
-                      className={inputClass}
+                      className={`${baseInput} ${reqBorder(form.senderId, addTouched)}`}
                     >
                       <option value="">-- Select --</option>
                       {staffList.map((s) => (
@@ -304,7 +320,7 @@ export default function LogSheetPage() {
                     <select
                       value={form.draftedById}
                       onChange={(e) => setForm({ ...form, draftedById: e.target.value })}
-                      className={inputClass}
+                      className={`${baseInput} ${reqBorder(form.draftedById, addTouched)}`}
                     >
                       <option value="">-- Select --</option>
                       {staffList.map((s) => (
@@ -321,84 +337,57 @@ export default function LogSheetPage() {
                       onChange={(e) => setForm({ ...form, sendTo: e.target.value })}
                       maxLength={100}
                       placeholder="Send To"
-                      className={inputClass}
+                      className={`${baseInput} ${reqBorder(form.sendTo, addTouched)}`}
                     />
                   </td>
                   <td className="px-4 py-2">
-                    <input
-                      type="text"
+                    <textarea
                       value={form.description}
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                       maxLength={100}
+                      rows={2}
                       placeholder="Description"
-                      className={inputClass}
+                      className={`${baseInput} resize-none ${reqBorder(form.description, addTouched)}`}
                     />
                   </td>
                   <td className="px-4 py-2">
-                    <input
-                      type="text"
+                    <textarea
                       value={form.remarks}
                       onChange={(e) => setForm({ ...form, remarks: e.target.value })}
                       maxLength={100}
+                      rows={2}
                       placeholder="Optional"
-                      className={inputClass}
+                      className={`${baseInput} resize-none border border-gray-300`}
                     />
                   </td>
                   <td className="px-4 py-2">
-                    <div className="border border-dashed border-gray-300 rounded px-2 py-1.5 text-sm bg-gray-50 font-mono text-[#1e3a5f] font-semibold whitespace-nowrap">
+                    <div className="border border-dashed border-gray-300 rounded px-2 py-1 text-sm bg-gray-50 font-mono text-[#1e3a5f] font-semibold whitespace-nowrap">
                       {previewRef}
                     </div>
                   </td>
-                  {isAdmin && (
-                    <td className="px-2 py-2">
-                      <div className="flex gap-1 justify-center">
-                        <button
-                          onClick={handleInlineSave}
-                          disabled={submitting}
-                          className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                          title="Save"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={cancelAdding}
-                          className="p-1.5 bg-gray-400 text-white rounded hover:bg-gray-500"
-                          title="Cancel"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                  {!isAdmin && (
-                    <td className="px-2 py-2">
-                      <div className="flex gap-1">
-                        <button
-                          onClick={handleInlineSave}
-                          disabled={submitting}
-                          className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                          title="Save"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={cancelAdding}
-                          className="p-1.5 bg-gray-400 text-white rounded hover:bg-gray-500"
-                          title="Cancel"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  )}
+                  <td className="px-2 py-2">
+                    <div className="flex gap-1 justify-center">
+                      <button
+                        onClick={handleInlineSave}
+                        disabled={submitting}
+                        className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                        title="Save"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={cancelAdding}
+                        className="p-1.5 bg-gray-400 text-white rounded hover:bg-gray-500"
+                        title="Cancel"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               )}
 
@@ -414,7 +403,7 @@ export default function LogSheetPage() {
 
                   if (isEditing) {
                     return (
-                      <tr key={log.id} className="border-t border-gray-100 bg-yellow-50/70">
+                      <tr key={log.id} className="border-t border-gray-100 bg-yellow-50/70 align-top">
                         <td className="px-4 py-2 whitespace-nowrap">
                           {new Date(log.date).toLocaleDateString("en-GB", {
                             day: "2-digit",
@@ -426,7 +415,7 @@ export default function LogSheetPage() {
                           <select
                             value={editForm.senderId}
                             onChange={(e) => setEditForm({ ...editForm, senderId: e.target.value })}
-                            className={inputClass}
+                            className={`${baseInput} ${reqBorder(editForm.senderId, editTouched)}`}
                           >
                             {staffList.map((s) => (
                               <option key={s.id} value={s.id}>
@@ -439,7 +428,7 @@ export default function LogSheetPage() {
                           <select
                             value={editForm.draftedById}
                             onChange={(e) => setEditForm({ ...editForm, draftedById: e.target.value })}
-                            className={inputClass}
+                            className={`${baseInput} ${reqBorder(editForm.draftedById, editTouched)}`}
                           >
                             {staffList.map((s) => (
                               <option key={s.id} value={s.id}>
@@ -454,25 +443,25 @@ export default function LogSheetPage() {
                             value={editForm.sendTo}
                             onChange={(e) => setEditForm({ ...editForm, sendTo: e.target.value })}
                             maxLength={100}
-                            className={inputClass}
+                            className={`${baseInput} ${reqBorder(editForm.sendTo, editTouched)}`}
                           />
                         </td>
                         <td className="px-4 py-2">
-                          <input
-                            type="text"
+                          <textarea
                             value={editForm.description}
                             onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                             maxLength={100}
-                            className={inputClass}
+                            rows={2}
+                            className={`${baseInput} resize-none ${reqBorder(editForm.description, editTouched)}`}
                           />
                         </td>
                         <td className="px-4 py-2">
-                          <input
-                            type="text"
+                          <textarea
                             value={editForm.remarks}
                             onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
                             maxLength={100}
-                            className={inputClass}
+                            rows={2}
+                            className={`${baseInput} resize-none border border-gray-300`}
                           />
                         </td>
                         <td className="px-4 py-2 font-mono font-semibold text-[#1e3a5f]">
@@ -512,23 +501,23 @@ export default function LogSheetPage() {
                         i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                       } hover:bg-blue-50/50 transition-colors`}
                     >
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-2 whitespace-nowrap">
                         {new Date(log.date).toLocaleDateString("en-GB", {
                           day: "2-digit",
                           month: "2-digit",
                           year: "numeric",
                         })}
                       </td>
-                      <td className="px-4 py-3">{log.sender.name}</td>
-                      <td className="px-4 py-3">{log.draftedBy.name}</td>
-                      <td className="px-4 py-3">{log.sendTo}</td>
-                      <td className="px-4 py-3">{log.description}</td>
-                      <td className="px-4 py-3 text-gray-500">{log.remarks || "-"}</td>
-                      <td className="px-4 py-3 font-mono font-semibold text-[#1e3a5f]">
+                      <td className="px-4 py-2">{log.sender.name}</td>
+                      <td className="px-4 py-2">{log.draftedBy.name}</td>
+                      <td className="px-4 py-2">{log.sendTo}</td>
+                      <td className="px-4 py-2">{log.description}</td>
+                      <td className="px-4 py-2 text-gray-500">{log.remarks || "-"}</td>
+                      <td className="px-4 py-2 font-mono font-semibold text-[#1e3a5f]">
                         {log.reference}
                       </td>
                       {isAdmin && (
-                        <td className="px-2 py-3 text-center">
+                        <td className="px-2 py-2 text-center">
                           <button
                             onClick={() => startEditing(log)}
                             className="px-3 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
