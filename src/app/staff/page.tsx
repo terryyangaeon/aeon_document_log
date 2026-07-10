@@ -26,6 +26,7 @@ export default function StaffPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState("active");
+  const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function fetchStaff(status?: string) {
@@ -160,8 +161,15 @@ export default function StaffPage() {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(staffList.length / pageSize));
-  const paginatedStaff = staffList.slice((page - 1) * pageSize, page * pageSize);
+  const filteredStaff = searchQuery
+    ? staffList.filter((s) => {
+        const q = searchQuery.toLowerCase();
+        return s.name.toLowerCase().includes(q) || s.staffNo.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+      })
+    : staffList;
+
+  const totalPages = Math.max(1, Math.ceil(filteredStaff.length / pageSize));
+  const paginatedStaff = filteredStaff.slice((page - 1) * pageSize, page * pageSize);
 
   if (loading) {
     return (
@@ -176,6 +184,16 @@ export default function StaffPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1e3a5f]">Staff Records</h1>
         <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search by Name, Staff No, or Email"
+            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-64"
+          />
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-600">Status:</label>
             <select
@@ -377,9 +395,9 @@ export default function StaffPage() {
             </div>
 
             <span className="text-sm text-gray-600">
-              {staffList.length === 0
+              {filteredStaff.length === 0
                 ? "0 of 0"
-                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, staffList.length)} of ${staffList.length}`}
+                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filteredStaff.length)} of ${filteredStaff.length}`}
             </span>
 
             <div className="flex gap-1">
