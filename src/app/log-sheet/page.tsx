@@ -38,6 +38,7 @@ export default function LogSheetPage() {
   const [logs, setLogs] = useState<DocumentLog[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [prefixes, setPrefixes] = useState<SystemCode[]>([]);
+  const [years, setYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
@@ -46,7 +47,6 @@ export default function LogSheetPage() {
   const [pageSize, setPageSize] = useState(10);
 
   const [form, setForm] = useState({
-    prefix: "",
     senderId: "",
     draftedById: "",
     sendTo: "",
@@ -61,13 +61,21 @@ export default function LogSheetPage() {
     setPage(1);
   }, [filterYear]);
 
+  const fetchYears = useCallback(async () => {
+    const res = await fetch("/api/document-log/years");
+    const data = await res.json();
+    setYears(data);
+  }, []);
+
   useEffect(() => {
     Promise.all([
       fetch("/api/staff").then((r) => r.json()),
       fetch("/api/system-code?type=PREFIX").then((r) => r.json()),
-    ]).then(([staff, codes]) => {
+      fetch("/api/document-log/years").then((r) => r.json()),
+    ]).then(([staff, codes, yrs]) => {
       setStaffList(staff);
       setPrefixes(codes);
+      setYears(yrs);
       setLoading(false);
     });
   }, []);
@@ -79,10 +87,20 @@ export default function LogSheetPage() {
   const totalPages = Math.max(1, Math.ceil(logs.length / pageSize));
   const paginatedLogs = logs.slice((page - 1) * pageSize, page * pageSize);
 
+  const prefix = prefixes.length > 0 ? prefixes[0].value : "---";
+  const selectedSender = staffList.find((s) => s.id === parseInt(form.senderId));
+  const selectedDrafter = staffList.find((s) => s.id === parseInt(form.draftedById));
+
+  const previewRef = (() => {
+    const senderPart = selectedSender ? selectedSender.initial.toUpperCase() : "??";
+    const drafterPart = selectedDrafter ? selectedDrafter.initial.toLowerCase() : "??";
+    const year = new Date().getFullYear();
+    return `${prefix}/${senderPart}/???/${year}/${drafterPart}`;
+  })();
+
   function startAdding() {
     setIsAdding(true);
     setForm({
-      prefix: prefixes[0]?.value || "",
       senderId: "",
       draftedById: "",
       sendTo: "",
@@ -107,6 +125,7 @@ export default function LogSheetPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          prefix,
           date: new Date().toISOString().split("T")[0],
           senderId: parseInt(form.senderId),
           draftedById: parseInt(form.draftedById),
@@ -121,6 +140,7 @@ export default function LogSheetPage() {
       toast.success(`Document created: ${doc.reference}`);
       setIsAdding(false);
       fetchLogs();
+      fetchYears();
     } catch {
       toast.error("Failed to create document log");
     } finally {
@@ -156,14 +176,11 @@ export default function LogSheetPage() {
             onChange={(e) => setFilterYear(e.target.value)}
             className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
           >
-            {Array.from({ length: 5 }, (_, i) => {
-              const y = new Date().getFullYear() - i;
-              return (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              );
-            })}
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -287,17 +304,9 @@ export default function LogSheetPage() {
                     />
                   </td>
                   <td className="px-4 py-2">
-                    <select
-                      value={form.prefix}
-                      onChange={(e) => setForm({ ...form, prefix: e.target.value })}
-                      className={inputClass}
-                    >
-                      {prefixes.map((p) => (
-                        <option key={p.id} value={p.value}>
-                          {p.value}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="border border-dashed border-gray-300 rounded px-2 py-1.5 text-sm bg-gray-50 font-mono text-[#1e3a5f] font-semibold whitespace-nowrap">
+                      {previewRef}
+                    </div>
                   </td>
                   <td className="px-2 py-2">
                     <div className="flex gap-1">
