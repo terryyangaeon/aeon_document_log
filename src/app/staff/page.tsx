@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 
 interface Staff {
@@ -21,6 +21,8 @@ export default function StaffPage() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function fetchStaff() {
     const res = await fetch("/api/staff");
@@ -55,8 +57,8 @@ export default function StaffPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name || !form.initial || !form.staffNo || !form.email) {
-      toast.error("Please fill in all fields");
+    if (!form.name || !form.initial || !form.email) {
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -86,6 +88,72 @@ export default function StaffPage() {
     fetchStaff();
   }
 
+  function downloadTemplate() {
+    const header = "Name,Initial,Staff No,Email";
+    const example = "John Doe,JD,S001,john.doe@example.com";
+    const csv = `${header}\n${example}`;
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "staff_import_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter((l) => l.trim());
+      if (lines.length < 2) {
+        toast.error("File must have a header row and at least one data row");
+        return;
+      }
+
+      const rows = lines.slice(1).map((line) => {
+        const cols = line.split(",").map((c) => c.trim());
+        return {
+          name: cols[0] || "",
+          initial: cols[1] || "",
+          staffNo: cols[2] || "",
+          email: cols[3] || "",
+        };
+      });
+
+      const res = await fetch("/api/staff/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const msgs = data.errors?.join("\n") || data.error;
+        toast.error(msgs, { duration: 6000 });
+        return;
+      }
+
+      if (data.errors?.length > 0) {
+        toast.success(`Imported ${data.imported} records`);
+        toast.error(`${data.errors.length} rows skipped:\n${data.errors.join("\n")}`, { duration: 6000 });
+      } else {
+        toast.success(`Successfully imported ${data.imported} records`);
+      }
+
+      fetchStaff();
+    } catch {
+      toast.error("Failed to import file");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -99,12 +167,32 @@ export default function StaffPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1e3a5f]">Staff Records</h1>
         {isAdmin && (
-          <button
-            onClick={() => (showForm ? cancelForm() : setShowForm(true))}
-            className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors font-medium"
-          >
-            {showForm ? "Cancel" : "+ Add Staff"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={downloadTemplate}
+              className="px-4 py-2 border border-[#1e3a5f] text-[#1e3a5f] rounded-lg hover:bg-[#1e3a5f]/5 transition-colors text-sm font-medium"
+            >
+              Download Template
+            </button>
+            <label
+              className={`px-4 py-2 border border-[#1e3a5f] text-[#1e3a5f] rounded-lg hover:bg-[#1e3a5f]/5 transition-colors text-sm font-medium cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              {importing ? "Importing..." : "Import"}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleImport}
+                className="hidden"
+              />
+            </label>
+            <button
+              onClick={() => (showForm ? cancelForm() : setShowForm(true))}
+              className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors font-medium"
+            >
+              {showForm ? "Cancel" : "+ Add Staff"}
+            </button>
+          </div>
         )}
       </div>
 
@@ -146,7 +234,7 @@ export default function StaffPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Staff No <span className="text-red-500">*</span>
+                Staff No
               </label>
               <input
                 type="text"
@@ -154,7 +242,6 @@ export default function StaffPage() {
                 onChange={(e) => setForm({ ...form, staffNo: e.target.value })}
                 maxLength={10}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
-                required
               />
             </div>
             <div>

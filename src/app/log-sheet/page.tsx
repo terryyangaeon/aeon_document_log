@@ -246,7 +246,7 @@ export default function LogSheetPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1e3a5f]">Document Log Sheet</h1>
+        <h1 className="text-2xl font-bold text-[#1e3a5f]">Document Reference Log</h1>
         <div className="flex items-center gap-3">
           {!isAdding && (
             <button
@@ -341,23 +341,23 @@ export default function LogSheetPage() {
                     />
                   </td>
                   <td className="px-4 py-2">
-                    <textarea
+                    <input
+                      type="text"
                       value={form.description}
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                       maxLength={100}
-                      rows={2}
                       placeholder="Description"
-                      className={`${baseInput} resize-none ${reqBorder(form.description, addTouched)}`}
+                      className={`${baseInput} ${reqBorder(form.description, addTouched)}`}
                     />
                   </td>
                   <td className="px-4 py-2">
-                    <textarea
+                    <input
+                      type="text"
                       value={form.remarks}
                       onChange={(e) => setForm({ ...form, remarks: e.target.value })}
                       maxLength={100}
-                      rows={2}
                       placeholder="Optional"
-                      className={`${baseInput} resize-none border border-gray-300`}
+                      className={`${baseInput} border border-gray-300`}
                     />
                   </td>
                   <td className="px-4 py-2">
@@ -447,21 +447,21 @@ export default function LogSheetPage() {
                           />
                         </td>
                         <td className="px-4 py-2">
-                          <textarea
+                          <input
+                            type="text"
                             value={editForm.description}
                             onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                             maxLength={100}
-                            rows={2}
-                            className={`${baseInput} resize-none ${reqBorder(editForm.description, editTouched)}`}
+                            className={`${baseInput} ${reqBorder(editForm.description, editTouched)}`}
                           />
                         </td>
                         <td className="px-4 py-2">
-                          <textarea
+                          <input
+                            type="text"
                             value={editForm.remarks}
                             onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
                             maxLength={100}
-                            rows={2}
-                            className={`${baseInput} resize-none border border-gray-300`}
+                            className={`${baseInput} border border-gray-300`}
                           />
                         </td>
                         <td className="px-4 py-2 font-mono font-semibold text-[#1e3a5f]">

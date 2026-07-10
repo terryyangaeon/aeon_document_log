@@ -97,6 +97,17 @@ export async function PUT(request: NextRequest) {
 
   if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
 
+  const existing = await prisma.documentLog.findUnique({ where: { id } });
+  if (!existing) return Response.json({ error: "Not found" }, { status: 404 });
+
+  const sender = await prisma.staff.findUnique({ where: { id: senderId } });
+  const drafter = await prisma.staff.findUnique({ where: { id: draftedById } });
+  if (!sender || !drafter) return Response.json({ error: "Invalid sender or drafter" }, { status: 400 });
+
+  const seqStr = String(existing.sequence).padStart(3, "0");
+  const year = new Date(existing.date).getFullYear();
+  const reference = `${existing.prefix}/${sender.initial.toUpperCase()}/${seqStr}/${year}/${drafter.initial.toLowerCase()}`;
+
   const doc = await prisma.documentLog.update({
     where: { id },
     data: {
@@ -105,6 +116,7 @@ export async function PUT(request: NextRequest) {
       sendTo,
       description,
       remarks: remarks || null,
+      reference,
     },
     include: { sender: true, draftedBy: true },
   });

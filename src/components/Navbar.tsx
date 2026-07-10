@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 const navItems = [
   { href: "/log-sheet", label: "Log Sheet" },
   { href: "/staff", label: "Staff Records" },
+  { href: "/accounts", label: "Account Management", adminOnly: true },
   { href: "/configuration", label: "Configuration", adminOnly: true },
 ];
 
@@ -61,18 +62,6 @@ export default function Navbar() {
                     {item.label}
                   </Link>
                 ))}
-                {isAdmin && (
-                  <Link
-                    href="/accounts"
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      pathname === "/accounts"
-                        ? "bg-white/20 text-white"
-                        : "text-white/80 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    Account Management
-                  </Link>
-                )}
               </div>
             )}
           </div>
