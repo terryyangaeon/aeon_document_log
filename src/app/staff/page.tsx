@@ -13,6 +13,7 @@ interface Staff {
 }
 
 const emptyForm = { name: "", initial: "", staffNo: "", email: "" };
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 export default function StaffPage() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
@@ -22,6 +23,8 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function fetchStaff() {
@@ -154,6 +157,9 @@ export default function StaffPage() {
     }
   }
 
+  const totalPages = Math.max(1, Math.ceil(staffList.length / pageSize));
+  const paginatedStaff = staffList.slice((page - 1) * pageSize, page * pageSize);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -163,7 +169,7 @@ export default function StaffPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1e3a5f]">Staff Records</h1>
         {isAdmin && (
@@ -277,60 +283,121 @@ export default function StaffPage() {
       )}
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-[#1e3a5f] text-white">
-              <th className="px-4 py-3 text-left font-medium">Name</th>
-              <th className="px-4 py-3 text-left font-medium">Initial</th>
-              <th className="px-4 py-3 text-left font-medium">Staff No</th>
-              <th className="px-4 py-3 text-left font-medium">Email</th>
-              <th className="px-4 py-3 text-center font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staffList.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  No staff records found
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" style={{ lineHeight: "1.1" }}>
+            <thead>
+              <tr className="bg-[#1e3a5f] text-white">
+                <th className="px-4 py-3 text-left font-medium">Name</th>
+                <th className="px-4 py-3 text-left font-medium">Initial</th>
+                <th className="px-4 py-3 text-left font-medium">Staff No</th>
+                <th className="px-4 py-3 text-left font-medium">Email</th>
+                <th className="px-4 py-3 text-center font-medium">Actions</th>
               </tr>
-            ) : (
-              staffList.map((s, i) => (
-                <tr
-                  key={s.id}
-                  className={`border-t border-gray-100 ${
-                    i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                  } hover:bg-blue-50/50 transition-colors`}
-                >
-                  <td className="px-4 py-3">{s.name}</td>
-                  <td className="px-4 py-3 font-mono">{s.initial}</td>
-                  <td className="px-4 py-3">{s.staffNo}</td>
-                  <td className="px-4 py-3">{s.email}</td>
-                  <td className="px-4 py-3 text-center">
-                    {isAdmin ? (
-                      <>
-                        <button
-                          onClick={() => startEdit(s)}
-                          className="text-blue-600 hover:text-blue-800 mr-3 text-sm font-medium"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeactivate(s.id)}
-                          className="text-red-500 hover:text-red-700 text-sm font-medium"
-                        >
-                          Deactivate
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-gray-400 text-sm">View only</span>
-                    )}
+            </thead>
+            <tbody>
+              {paginatedStaff.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                    No staff records found
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                paginatedStaff.map((s, i) => (
+                  <tr
+                    key={s.id}
+                    className={`border-t border-gray-100 ${
+                      i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                    } hover:bg-blue-50/50 transition-colors`}
+                  >
+                    <td className="px-4 py-2">{s.name}</td>
+                    <td className="px-4 py-2 font-mono">{s.initial}</td>
+                    <td className="px-4 py-2">{s.staffNo}</td>
+                    <td className="px-4 py-2">{s.email}</td>
+                    <td className="px-4 py-2 text-center">
+                      {isAdmin ? (
+                        <>
+                          <button
+                            onClick={() => startEdit(s)}
+                            className="text-blue-600 hover:text-blue-800 mr-3 text-sm font-medium"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeactivate(s.id)}
+                            className="text-red-500 hover:text-red-700 text-sm font-medium"
+                          >
+                            Deactivate
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-gray-400 text-sm">View only</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200 bg-gray-50/50">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <span className="text-sm text-gray-600">
+              {staffList.length === 0
+                ? "0 of 0"
+                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, staffList.length)} of ${staffList.length}`}
+            </span>
+
+            <div className="flex gap-1">
+              <button
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                &laquo;
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                &lsaquo;
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                &rsaquo;
+              </button>
+              <button
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+                className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                &raquo;
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
