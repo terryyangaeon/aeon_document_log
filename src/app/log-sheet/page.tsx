@@ -32,17 +32,20 @@ interface DocumentLog {
   draftedBy: Staff;
 }
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
+
 export default function LogSheetPage() {
   const [logs, setLogs] = useState<DocumentLog[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [prefixes, setPrefixes] = useState<SystemCode[]>([]);
-  const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
+  const [isAdding, setIsAdding] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [form, setForm] = useState({
-    date: new Date().toISOString().split("T")[0],
     prefix: "",
     senderId: "",
     draftedById: "",
@@ -55,6 +58,7 @@ export default function LogSheetPage() {
     const res = await fetch(`/api/document-log?year=${filterYear}`);
     const data = await res.json();
     setLogs(data.logs);
+    setPage(1);
   }, [filterYear]);
 
   useEffect(() => {
@@ -64,7 +68,6 @@ export default function LogSheetPage() {
     ]).then(([staff, codes]) => {
       setStaffList(staff);
       setPrefixes(codes);
-      if (codes.length > 0) setForm((f) => ({ ...f, prefix: codes[0].value }));
       setLoading(false);
     });
   }, []);
@@ -73,19 +76,26 @@ export default function LogSheetPage() {
     fetchLogs();
   }, [fetchLogs]);
 
-  const selectedSender = staffList.find((s) => s.id === parseInt(form.senderId));
-  const selectedDrafter = staffList.find((s) => s.id === parseInt(form.draftedById));
+  const totalPages = Math.max(1, Math.ceil(logs.length / pageSize));
+  const paginatedLogs = logs.slice((page - 1) * pageSize, page * pageSize);
 
-  const previewRef = (() => {
-    if (!form.prefix || !selectedSender || !selectedDrafter || !form.date) return "---";
-    const year = new Date(form.date).getFullYear();
-    const senderInitial = selectedSender.initial.toUpperCase();
-    const drafterInitial = selectedDrafter.initial.toLowerCase();
-    return `${form.prefix}/${senderInitial}/???/${year}/${drafterInitial}`;
-  })();
+  function startAdding() {
+    setIsAdding(true);
+    setForm({
+      prefix: prefixes[0]?.value || "",
+      senderId: "",
+      draftedById: "",
+      sendTo: "",
+      description: "",
+      remarks: "",
+    });
+  }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function cancelAdding() {
+    setIsAdding(false);
+  }
+
+  async function handleInlineSave() {
     if (!form.senderId || !form.draftedById || !form.sendTo || !form.description) {
       toast.error("Please fill in all required fields");
       return;
@@ -97,6 +107,7 @@ export default function LogSheetPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          date: new Date().toISOString().split("T")[0],
           senderId: parseInt(form.senderId),
           draftedById: parseInt(form.draftedById),
         }),
@@ -108,16 +119,7 @@ export default function LogSheetPage() {
       }
       const doc = await res.json();
       toast.success(`Document created: ${doc.reference}`);
-      setShowForm(false);
-      setForm({
-        date: new Date().toISOString().split("T")[0],
-        prefix: prefixes[0]?.value || "",
-        senderId: "",
-        draftedById: "",
-        sendTo: "",
-        description: "",
-        remarks: "",
-      });
+      setIsAdding(false);
       fetchLogs();
     } catch {
       toast.error("Failed to create document log");
@@ -134,202 +136,62 @@ export default function LogSheetPage() {
     );
   }
 
+  const todayFormatted = new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  const inputClass =
+    "w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent";
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1e3a5f]">Document Log Sheet</h1>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-600">Year:</label>
-            <select
-              value={filterYear}
-              onChange={(e) => setFilterYear(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
-            >
-              {Array.from({ length: 5 }, (_, i) => {
-                const y = new Date().getFullYear() - i;
-                return (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors font-medium"
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-600">Year:</label>
+          <select
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
           >
-            {showForm ? "Cancel" : "+ New Document"}
-          </button>
+            {Array.from({ length: 5 }, (_, i) => {
+              const y = new Date().getFullYear() - i;
+              return (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              );
+            })}
+          </select>
         </div>
       </div>
-
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm"
-        >
-          <h2 className="text-lg font-semibold text-[#1e3a5f] mb-4">
-            New Document Log Entry
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prefix <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={form.prefix}
-                onChange={(e) => setForm({ ...form, prefix: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
-                required
-              >
-                {prefixes.map((p) => (
-                  <option key={p.id} value={p.value}>
-                    {p.value}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Sender (Name of Sender) <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={form.senderId}
-                onChange={(e) => setForm({ ...form, senderId: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
-                required
-              >
-                <option value="">-- Select Sender --</option>
-                {staffList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.initial})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Drafted By <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={form.draftedById}
-                onChange={(e) =>
-                  setForm({ ...form, draftedById: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
-                required
-              >
-                <option value="">-- Select Drafter --</option>
-                {staffList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.initial})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Send To <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={form.sendTo}
-                onChange={(e) => setForm({ ...form, sendTo: e.target.value })}
-                maxLength={100}
-                placeholder="e.g. Transport Department"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Document Description <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                maxLength={100}
-                placeholder="e.g. Notice"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Remarks
-              </label>
-              <input
-                type="text"
-                value={form.remarks}
-                onChange={(e) => setForm({ ...form, remarks: e.target.value })}
-                maxLength={100}
-                placeholder="Optional remarks"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
-              />
-            </div>
-            <div className="flex items-end">
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Reference No. (Preview)
-                </label>
-                <div className="w-full border border-dashed border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-mono text-[#1e3a5f] font-semibold">
-                  {previewRef}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-6 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors font-medium disabled:opacity-50"
-            >
-              {submitting ? "Saving..." : "Save Document"}
-            </button>
-          </div>
-        </form>
-      )}
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#1e3a5f] text-white">
-                <th className="px-4 py-3 text-left font-medium">Date</th>
+                <th className="px-4 py-3 text-left font-medium w-28">Date</th>
                 <th className="px-4 py-3 text-left font-medium">Name of Sender</th>
                 <th className="px-4 py-3 text-left font-medium">Drafted By</th>
                 <th className="px-4 py-3 text-left font-medium">Send To</th>
                 <th className="px-4 py-3 text-left font-medium">Document Description</th>
                 <th className="px-4 py-3 text-left font-medium">Remarks</th>
                 <th className="px-4 py-3 text-left font-medium">Reference No.</th>
+                {isAdding && <th className="px-4 py-3 text-left font-medium w-20"></th>}
               </tr>
             </thead>
             <tbody>
-              {logs.length === 0 ? (
+              {paginatedLogs.length === 0 && !isAdding ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                     No document logs found for {filterYear}
                   </td>
                 </tr>
               ) : (
-                logs.map((log, i) => (
+                paginatedLogs.map((log, i) => (
                   <tr
                     key={log.id}
                     className={`border-t border-gray-100 ${
@@ -351,11 +213,192 @@ export default function LogSheetPage() {
                     <td className="px-4 py-3 font-mono font-semibold text-[#1e3a5f]">
                       {log.reference}
                     </td>
+                    {isAdding && <td></td>}
                   </tr>
                 ))
               )}
+
+              {isAdding && (
+                <tr className="border-t-2 border-[#1e3a5f]/30 bg-blue-50/70">
+                  <td className="px-4 py-2">
+                    <input
+                      type="text"
+                      value={todayFormatted}
+                      disabled
+                      className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <select
+                      value={form.senderId}
+                      onChange={(e) => setForm({ ...form, senderId: e.target.value })}
+                      className={inputClass}
+                    >
+                      <option value="">-- Select --</option>
+                      {staffList.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-4 py-2">
+                    <select
+                      value={form.draftedById}
+                      onChange={(e) => setForm({ ...form, draftedById: e.target.value })}
+                      className={inputClass}
+                    >
+                      <option value="">-- Select --</option>
+                      {staffList.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="text"
+                      value={form.sendTo}
+                      onChange={(e) => setForm({ ...form, sendTo: e.target.value })}
+                      maxLength={100}
+                      placeholder="Send To"
+                      className={inputClass}
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="text"
+                      value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      maxLength={100}
+                      placeholder="Description"
+                      className={inputClass}
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="text"
+                      value={form.remarks}
+                      onChange={(e) => setForm({ ...form, remarks: e.target.value })}
+                      maxLength={100}
+                      placeholder="Optional"
+                      className={inputClass}
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <select
+                      value={form.prefix}
+                      onChange={(e) => setForm({ ...form, prefix: e.target.value })}
+                      className={inputClass}
+                    >
+                      {prefixes.map((p) => (
+                        <option key={p.id} value={p.value}>
+                          {p.value}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-2 py-2">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={handleInlineSave}
+                        disabled={submitting}
+                        className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                        title="Save"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={cancelAdding}
+                        className="p-1.5 bg-gray-400 text-white rounded hover:bg-gray-500"
+                        title="Cancel"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
+        </div>
+
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50/50">
+          <div className="flex items-center gap-2">
+            {!isAdding && (
+              <button
+                onClick={startAdding}
+                className="w-8 h-8 flex items-center justify-center bg-[#1e3a5f] text-white rounded hover:bg-[#2d5a8e] transition-colors"
+                title="Add new document"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <span className="text-sm text-gray-600">
+              {logs.length === 0
+                ? "0 of 0"
+                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, logs.length)} of ${logs.length}`}
+            </span>
+
+            <div className="flex gap-1">
+              <button
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                &laquo;
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                &lsaquo;
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                &rsaquo;
+              </button>
+              <button
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+                className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                &raquo;
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
