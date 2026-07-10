@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
 
 interface Staff {
@@ -167,6 +167,20 @@ export default function StaffPage() {
         return s.name.toLowerCase().includes(q) || s.staffNo.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
       })
     : staffList;
+
+  const duplicateInitials = useMemo(() => {
+    const activeStaff = statusFilter === "inactive" ? [] : staffList.filter((s) => s.isActive);
+    const counts = new Map<string, number>();
+    for (const s of activeStaff) {
+      const key = s.initial.toUpperCase();
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    const dupes = new Set<string>();
+    for (const [key, count] of counts) {
+      if (count > 1) dupes.add(key);
+    }
+    return dupes;
+  }, [staffList, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredStaff.length / pageSize));
   const paginatedStaff = filteredStaff.slice((page - 1) * pageSize, page * pageSize);
@@ -348,7 +362,7 @@ export default function StaffPage() {
                     } hover:bg-blue-50/50 transition-colors`}
                   >
                     <td className="px-4 py-2">{s.name}</td>
-                    <td className="px-4 py-2 font-mono">{s.initial}</td>
+                    <td className={`px-4 py-2 font-mono ${duplicateInitials.has(s.initial.toUpperCase()) ? "bg-red-100 text-red-700 font-semibold" : ""}`}>{s.initial}</td>
                     <td className="px-4 py-2">{s.staffNo}</td>
                     <td className="px-4 py-2">{s.email}</td>
                     {isAdmin && (
