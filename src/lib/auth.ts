@@ -21,10 +21,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user?.email) {
-        const appUser = await prisma.appUser.findUnique({
-          where: { email: user.email },
-        });
-        token.role = appUser?.isActive ? appUser.role : "user";
+        try {
+          const appUser = await prisma.appUser.findUnique({
+            where: { email: user.email },
+          });
+          token.role = appUser?.isActive ? appUser.role : "user";
+        } catch {
+          token.role = "user";
+        }
       }
       return token;
     },
