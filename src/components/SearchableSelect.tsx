@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 interface Option {
   value: string;
@@ -24,8 +25,10 @@ export default function SearchableSelect({
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLUListElement>(null);
 
   const selected = options.find((o) => o.value === value);
 
@@ -33,9 +36,25 @@ export default function SearchableSelect({
     ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
     : options;
 
+  const updatePosition = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 2,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, []);
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
         setSearch("");
       }
@@ -43,6 +62,18 @@ export default function SearchableSelect({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      updatePosition();
+      window.addEventListener("scroll", updatePosition, true);
+      window.addEventListener("resize", updatePosition);
+      return () => {
+        window.removeEventListener("scroll", updatePosition, true);
+        window.removeEventListener("resize", updatePosition);
+      };
+    }
+  }, [open, updatePosition]);
 
   function handleSelect(val: string) {
     onChange(val);
@@ -55,6 +86,7 @@ export default function SearchableSelect({
       <div
         onClick={() => {
           setOpen(true);
+          updatePosition();
           setTimeout(() => inputRef.current?.focus(), 0);
         }}
         className="flex items-center cursor-pointer"
@@ -86,23 +118,33 @@ export default function SearchableSelect({
           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
         </svg>
       </div>
-      {open && (
-        <ul className="absolute z-50 mt-1 w-full max-h-48 overflow-auto bg-white border border-gray-300 rounded shadow-lg text-sm">
-          {filtered.length === 0 ? (
-            <li className="px-3 py-2 text-gray-400">No results</li>
-          ) : (
-            filtered.map((o) => (
-              <li
-                key={o.value}
-                onClick={() => handleSelect(o.value)}
-                className={`px-3 py-1.5 cursor-pointer hover:bg-blue-50 ${o.value === value ? "bg-blue-100 font-medium" : ""}`}
-              >
-                {o.label}
-              </li>
-            ))
-          )}
-        </ul>
-      )}
+      {open &&
+        createPortal(
+          <ul
+            ref={dropdownRef}
+            className="fixed z-[9999] max-h-48 overflow-auto bg-white border border-gray-300 rounded shadow-lg text-sm"
+            style={{
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              width: dropdownPos.width,
+            }}
+          >
+            {filtered.length === 0 ? (
+              <li className="px-3 py-2 text-gray-400">No results</li>
+            ) : (
+              filtered.map((o) => (
+                <li
+                  key={o.value}
+                  onMouseDown={() => handleSelect(o.value)}
+                  className={`px-3 py-1.5 cursor-pointer hover:bg-blue-50 ${o.value === value ? "bg-blue-100 font-medium" : ""}`}
+                >
+                  {o.label}
+                </li>
+              ))
+            )}
+          </ul>,
+          document.body
+        )}
     </div>
   );
 }
