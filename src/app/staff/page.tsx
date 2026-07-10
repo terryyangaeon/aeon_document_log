@@ -25,11 +25,14 @@ export default function StaffPage() {
   const [importing, setImporting] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [statusFilter, setStatusFilter] = useState("active");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function fetchStaff() {
-    const res = await fetch("/api/staff");
+  async function fetchStaff(status?: string) {
+    const s = status ?? statusFilter;
+    const res = await fetch(`/api/staff?status=${s}`);
     setStaffList(await res.json());
+    setPage(1);
     setLoading(false);
   }
 
@@ -172,8 +175,24 @@ export default function StaffPage() {
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1e3a5f]">Staff Records</h1>
-        {isAdmin && (
+        <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-600">Status:</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                fetchStaff(e.target.value);
+              }}
+              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+          {isAdmin && (
+            <>
             <button
               onClick={downloadTemplate}
               className="px-4 py-2 border border-[#1e3a5f] text-[#1e3a5f] rounded-lg hover:bg-[#1e3a5f]/5 transition-colors text-sm font-medium"
@@ -198,8 +217,9 @@ export default function StaffPage() {
             >
               {showForm ? "Cancel" : "+ Add Staff"}
             </button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       {showForm && (
@@ -291,13 +311,13 @@ export default function StaffPage() {
                 <th className="px-4 py-3 text-left font-medium">Initial</th>
                 <th className="px-4 py-3 text-left font-medium">Staff No</th>
                 <th className="px-4 py-3 text-left font-medium">Email</th>
-                <th className="px-4 py-3 text-center font-medium">Actions</th>
+                {isAdmin && <th className="px-4 py-3 text-center font-medium">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {paginatedStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-gray-400">
                     No staff records found
                   </td>
                 </tr>
@@ -313,26 +333,22 @@ export default function StaffPage() {
                     <td className="px-4 py-2 font-mono">{s.initial}</td>
                     <td className="px-4 py-2">{s.staffNo}</td>
                     <td className="px-4 py-2">{s.email}</td>
-                    <td className="px-4 py-2 text-center">
-                      {isAdmin ? (
-                        <>
-                          <button
-                            onClick={() => startEdit(s)}
-                            className="text-blue-600 hover:text-blue-800 mr-3 text-sm font-medium"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeactivate(s.id)}
-                            className="text-red-500 hover:text-red-700 text-sm font-medium"
-                          >
-                            Deactivate
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-gray-400 text-sm">View only</span>
-                      )}
-                    </td>
+                    {isAdmin && (
+                      <td className="px-4 py-2 text-center">
+                        <button
+                          onClick={() => startEdit(s)}
+                          className="text-blue-600 hover:text-blue-800 mr-3 text-sm font-medium"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeactivate(s.id)}
+                          className="text-red-500 hover:text-red-700 text-sm font-medium"
+                        >
+                          Deactivate
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

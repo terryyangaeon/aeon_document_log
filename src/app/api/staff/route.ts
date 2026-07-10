@@ -2,12 +2,17 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireAdmin } from "@/lib/api-auth";
 import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await requireAuth();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get("status") || "active";
+
+  const where = status === "all" ? {} : { isActive: status !== "inactive" };
+
   const staff = await prisma.staff.findMany({
-    where: { isActive: true },
+    where,
     orderBy: { name: "asc" },
   });
   return Response.json(staff);
