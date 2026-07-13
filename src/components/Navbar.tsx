@@ -66,6 +66,16 @@ export default function Navbar() {
             )}
           </div>
           <div className="flex items-center gap-4">
+            {session?.user && (
+              <a
+                href="/AEON_Document_Log_Operation_Manual.pptx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 rounded-md transition-colors text-white/80 hover:text-white"
+              >
+                User Guide
+              </a>
+            )}
             {session?.user ? (
               <div className="flex items-center gap-3">
                 <span className="text-sm text-white/80">
