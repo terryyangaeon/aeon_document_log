@@ -540,63 +540,12 @@ export default function LogSheetPage() {
                       </td>
                       {isAdmin && (
                         <td className="px-2 py-2 text-center">
-                          <div className="flex gap-1 justify-center items-center relative">
-                            <button
-                              onClick={() => startEditing(log)}
-                              className="px-3 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => openAuditLog(log.id)}
-                              className="px-2 py-1 text-xs bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-colors"
-                              title="View change history"
-                            >
-                              View Log
-                            </button>
-                            {auditLogId === log.id && (
-                              <div
-                                ref={auditPopoverRef}
-                                className="absolute right-0 top-8 z-50 w-[500px] bg-white border border-gray-300 rounded-lg shadow-xl"
-                              >
-                                <div className="flex items-center justify-between px-4 py-2 bg-[#1e3a5f] text-white rounded-t-lg">
-                                  <span className="text-sm font-medium">Audit Log - {log.reference}</span>
-                                  <button onClick={() => setAuditLogId(null)} className="text-white/80 hover:text-white text-lg leading-none">&times;</button>
-                                </div>
-                                <div className="max-h-64 overflow-auto">
-                                  {auditLoading ? (
-                                    <div className="px-4 py-6 text-center text-gray-400 text-sm">Loading...</div>
-                                  ) : auditLogs.length === 0 ? (
-                                    <div className="px-4 py-6 text-center text-gray-400 text-sm">No changes recorded</div>
-                                  ) : (
-                                    <table className="w-full text-xs">
-                                      <thead>
-                                        <tr className="bg-gray-50 border-b">
-                                          <th className="px-3 py-2 text-left font-medium text-gray-600">Date/Time</th>
-                                          <th className="px-3 py-2 text-left font-medium text-gray-600">User</th>
-                                          <th className="px-3 py-2 text-left font-medium text-gray-600">Changes</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {auditLogs.map((al) => (
-                                          <tr key={al.id} className="border-b border-gray-100">
-                                            <td className="px-3 py-2 whitespace-nowrap text-gray-500">
-                                              {new Date(al.createdAt).toLocaleString("en-GB", {
-                                                day: "2-digit", month: "2-digit", year: "numeric",
-                                                hour: "2-digit", minute: "2-digit",
-                                              })}
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap">{al.userName}</td>
-                                            <td className="px-3 py-2">{al.description}</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => startEditing(log)}
+                            className="px-3 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                          >
+                            Edit
+                          </button>
                         </td>
                       )}
                     </tr>
