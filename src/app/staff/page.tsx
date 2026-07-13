@@ -168,19 +168,24 @@ export default function StaffPage() {
       })
     : staffList;
 
-  const duplicateInitials = useMemo(() => {
-    const activeStaff = statusFilter === "inactive" ? [] : staffList.filter((s) => s.isActive);
-    const counts = new Map<string, number>();
+  const { duplicateInitials, duplicateWarnings } = useMemo(() => {
+    const activeStaff = staffList.filter((s) => s.isActive);
+    const grouped = new Map<string, string[]>();
     for (const s of activeStaff) {
       const key = s.initial.toUpperCase();
-      counts.set(key, (counts.get(key) || 0) + 1);
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(s.name);
     }
     const dupes = new Set<string>();
-    for (const [key, count] of counts) {
-      if (count > 1) dupes.add(key);
+    const warnings: string[] = [];
+    for (const [key, names] of grouped) {
+      if (names.length > 1) {
+        dupes.add(key);
+        warnings.push(`${key}: ${names.join(", ")}`);
+      }
     }
-    return dupes;
-  }, [staffList, statusFilter]);
+    return { duplicateInitials: dupes, duplicateWarnings: warnings };
+  }, [staffList]);
 
   const totalPages = Math.max(1, Math.ceil(filteredStaff.length / pageSize));
   const paginatedStaff = filteredStaff.slice((page - 1) * pageSize, page * pageSize);
@@ -253,6 +258,12 @@ export default function StaffPage() {
           )}
         </div>
       </div>
+
+      {duplicateWarnings.length > 0 && (
+        <div className="text-red-600 text-sm font-medium mb-2">
+          Duplicate Initial: {duplicateWarnings.join(" | ")}
+        </div>
+      )}
 
       {showForm && (
         <form
