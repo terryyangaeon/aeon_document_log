@@ -77,17 +77,13 @@ export default function Navbar() {
               </a>
             )}
             {session?.user ? (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-white/80">
-                  {session.user.name || session.user.email}
-                </span>
-                <button
-                  onClick={() => signOut()}
-                  className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 rounded-md transition-colors"
-                >
-                  Sign Out
-                </button>
-              </div>
+              <button
+                onClick={() => signOut()}
+                className="px-4 py-1.5 bg-white/10 hover:bg-white/20 rounded-md transition-colors flex flex-col items-center leading-tight"
+              >
+                <span className="text-sm text-white">Sign Out</span>
+                <span className="text-[10px] text-white/70">{session.user.name || session.user.email}</span>
+              </button>
             ) : (
               <button
                 onClick={() => signIn("microsoft-entra-id")}
