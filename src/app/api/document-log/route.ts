@@ -97,16 +97,40 @@ export async function PUT(request: NextRequest) {
 
   if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
 
-  const existing = await prisma.documentLog.findUnique({ where: { id } });
+  const existing = await prisma.documentLog.findUnique({
+    where: { id },
+    include: { sender: true, draftedBy: true },
+  });
   if (!existing) return Response.json({ error: "Not found" }, { status: 404 });
 
   const sender = await prisma.staff.findUnique({ where: { id: senderId } });
   const drafter = await prisma.staff.findUnique({ where: { id: draftedById } });
   if (!sender || !drafter) return Response.json({ error: "Invalid sender or drafter" }, { status: 400 });
 
+  const changes: string[] = [];
+  if (existing.senderId !== senderId) {
+    changes.push(`Name of Sender changed from [${existing.sender.name}] to [${sender.name}]`);
+  }
+  if (existing.draftedById !== draftedById) {
+    changes.push(`Drafted By changed from [${existing.draftedBy.name}] to [${drafter.name}]`);
+  }
+  if (existing.sendTo !== sendTo) {
+    changes.push(`Send To changed from [${existing.sendTo}] to [${sendTo}]`);
+  }
+  if (existing.description !== description) {
+    changes.push(`Document Description changed from [${existing.description}] to [${description}]`);
+  }
+  if ((existing.remarks || "") !== (remarks || "")) {
+    changes.push(`Remarks changed from [${existing.remarks || ""}] to [${remarks || ""}]`);
+  }
+
   const seqStr = String(existing.sequence).padStart(3, "0");
   const year = new Date(existing.date).getFullYear();
   const reference = `${existing.prefix}/${sender.initial.toUpperCase()}/${seqStr}/${year}/${drafter.initial.toLowerCase()}`;
+
+  if (existing.reference !== reference) {
+    changes.push(`Reference No. changed from [${existing.reference}] to [${reference}]`);
+  }
 
   const doc = await prisma.documentLog.update({
     where: { id },
@@ -120,6 +144,18 @@ export async function PUT(request: NextRequest) {
     },
     include: { sender: true, draftedBy: true },
   });
+
+  if (changes.length > 0) {
+    const userName = session.user?.name || session.user?.email || "Unknown";
+    await prisma.auditLog.create({
+      data: {
+        documentId: id,
+        reference: doc.reference,
+        userName,
+        description: changes.join("; "),
+      },
+    });
+  }
 
   return Response.json(doc);
 }

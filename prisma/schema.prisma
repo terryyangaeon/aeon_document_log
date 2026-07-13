@@ -80,8 +80,22 @@ model DocumentLog {
 
   sender    Staff @relation("Sender", fields: [senderId], references: [id])
   draftedBy Staff @relation("DraftedBy", fields: [draftedById], references: [id])
+  auditLogs AuditLog[]
 
   @@map("document_log")
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  documentId  Int      @map("document_id")
+  reference   String   @db.VarChar(50)
+  userName    String   @db.VarChar(100) @map("user_name")
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  document DocumentLog @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("audit_log")
 }
 
 model SystemCode {
