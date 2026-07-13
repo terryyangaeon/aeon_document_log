@@ -164,7 +164,7 @@ export default function StaffPage() {
   const filteredStaff = searchQuery
     ? staffList.filter((s) => {
         const q = searchQuery.toLowerCase();
-        return s.name.toLowerCase().includes(q) || s.staffNo.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+        return s.name.toLowerCase().includes(q) || s.initial.toLowerCase().includes(q) || s.staffNo.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
       })
     : staffList;
 
@@ -210,7 +210,7 @@ export default function StaffPage() {
               setSearchQuery(e.target.value);
               setPage(1);
             }}
-            placeholder="Search by Name, Staff No, or Email"
+            placeholder="Search by Name, Initial, Staff No, or Email"
             className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-64"
           />
           <div className="flex items-center gap-2">
