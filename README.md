@@ -42,9 +42,9 @@ Example: `ADA/MB/246/2026/pc`
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `AZURE_AD_CLIENT_ID` | Microsoft Entra ID app client ID |
-| `AZURE_AD_CLIENT_SECRET` | Microsoft Entra ID app client secret |
-| `AZURE_AD_TENANT_ID` | Microsoft Entra ID tenant ID |
+| `SSO_CLIENT_ID` | Microsoft Entra ID app client ID |
+| `SSO_CLIENT_SECRET` | Microsoft Entra ID app client secret |
+| `SSO_TENANT_ID` | Microsoft Entra ID tenant ID |
 | `NEXTAUTH_URL` | Application URL |
 | `NEXTAUTH_SECRET` | NextAuth.js secret key |
 

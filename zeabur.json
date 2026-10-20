@@ -20,15 +20,15 @@
           "default": "",
           "expose": true
         },
-        "AZURE_AD_CLIENT_ID": {
+        "SSO_CLIENT_ID": {
           "default": "",
           "expose": true
         },
-        "AZURE_AD_CLIENT_SECRET": {
+        "SSO_CLIENT_SECRET": {
           "default": "",
           "expose": true
         },
-        "AZURE_AD_TENANT_ID": {
+        "SSO_TENANT_ID": {
           "default": "",
           "expose": true
         }
