@@ -42,7 +42,8 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Copy Prisma CLI and its WASM dependencies from .bin
+COPY --from=builder /app/node_modules/.bin/prisma* ./node_modules/.bin/
 
 # Startup script: run migrations then start the app
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
