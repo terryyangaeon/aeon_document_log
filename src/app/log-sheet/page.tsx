@@ -245,6 +245,22 @@ export default function LogSheetPage() {
     }
   }
 
+  async function handleDelete(id: number, reference: string) {
+    if (!confirm(`Are you sure you want to delete document ${reference}?`)) return;
+    try {
+      const res = await fetch(`/api/document-log?id=${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        toast.error("Failed to delete document log");
+        return;
+      }
+      toast.success("Document deleted");
+      fetchLogs();
+      fetchYears();
+    } catch {
+      toast.error("Failed to delete document log");
+    }
+  }
+
   async function openAuditLog(docId: number) {
     setAuditLogId(docId);
     setAuditLoading(true);
@@ -332,7 +348,7 @@ export default function LogSheetPage() {
                 <th className="px-4 py-3 text-left font-medium">Document Description</th>
                 <th className="px-4 py-3 text-left font-medium">Remarks</th>
                 <th className="px-4 py-3 text-left font-medium">Reference No.</th>
-                {isAdmin && <th className="px-4 py-3 text-center font-medium w-24">Actions</th>}
+                {isAdmin && <th className="px-4 py-3 text-center font-medium w-32">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -540,12 +556,20 @@ export default function LogSheetPage() {
                       </td>
                       {isAdmin && (
                         <td className="px-2 py-2 text-center">
-                          <button
-                            onClick={() => startEditing(log)}
-                            className="px-3 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex gap-1 justify-center">
+                            <button
+                              onClick={() => startEditing(log)}
+                              className="px-3 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(log.id, log.reference)}
+                              className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
