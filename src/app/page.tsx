@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -16,26 +17,44 @@ export default function Home() {
 
   if (status === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-[80vh]">
-        <div className="text-lg text-gray-500">Loading...</div>
+      <div className="ov-login-backdrop">
+        <div className="ov-login-box">
+          <div className="text-gray-500">Loading...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh]">
-      <div className="text-center space-y-6">
-        <h1 className="text-4xl font-bold text-[#1e3a5f]">
-          AEON Document Log
-        </h1>
-        <p className="text-gray-600 text-lg">
-          Document reference number management system
-        </p>
+    <div className="ov-login-backdrop">
+      <div className="ov-login-box">
+        <div className="ov-login-brand">
+          <Image
+            src="/aeon_banner.png"
+            alt="AEON delight"
+            width={180}
+            height={50}
+            priority
+          />
+          <div className="ov-login-l1">文件記錄</div>
+          <div className="ov-login-l2">AEON Document Log</div>
+        </div>
+
         <button
           onClick={() => signIn("microsoft-entra-id")}
-          className="px-6 py-3 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8e] transition-colors font-medium"
+          className="ov-sso-btn"
         >
-          Sign In
+          <svg width="20" height="20" viewBox="0 0 21 21" aria-hidden="true">
+            <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+            <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+            <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+            <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+          </svg>
+          <span>
+            使用 永旺永樂(亞洲) 帳戶登入
+            <br />
+            Sign in with AEON Delight (Asia) Account
+          </span>
         </button>
       </div>
     </div>
