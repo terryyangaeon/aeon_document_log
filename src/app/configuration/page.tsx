@@ -78,15 +78,6 @@ export default function ConfigurationPage() {
     fetchCodes();
   }
 
-  const grouped = codes.reduce(
-    (acc, code) => {
-      if (!acc[code.type]) acc[code.type] = [];
-      acc[code.type].push(code);
-      return acc;
-    },
-    {} as Record<string, SystemCode[]>
-  );
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -164,64 +155,59 @@ export default function ConfigurationPage() {
         </form>
       )}
 
-      {Object.keys(grouped).length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400">
-          No configurations found. Add a PREFIX to get started.
-        </div>
-      ) : (
-        Object.entries(grouped).map(([type, items]) => (
-          <div
-            key={type}
-            className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-4"
-          >
-            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-              <h3 className="font-semibold text-[#1e3a5f]">{type}</h3>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#1e3a5f] text-white">
-                  <th className="px-4 py-2 text-left font-medium">Value</th>
-                  <th className="px-4 py-2 text-center font-medium w-40">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((code, i) => (
-                  <tr
-                    key={code.id}
-                    className={`border-t border-gray-100 ${
-                      i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                    } hover:bg-blue-50/50 transition-colors`}
-                  >
-                    <td className="px-4 py-3 font-mono">{code.value}</td>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-[#1e3a5f] text-white">
+              <th className="px-4 py-3 text-left font-medium">Type</th>
+              <th className="px-4 py-3 text-left font-medium">Value</th>
+              {isAdmin && (
+                <th className="px-4 py-3 text-center font-medium w-40">Actions</th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {codes.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={isAdmin ? 3 : 2}
+                  className="px-4 py-8 text-center text-gray-400"
+                >
+                  No configurations found. Add a PREFIX to get started.
+                </td>
+              </tr>
+            ) : (
+              codes.map((code, i) => (
+                <tr
+                  key={code.id}
+                  className={`border-t border-gray-100 ${
+                    i % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                  } hover:bg-blue-50/50 transition-colors`}
+                >
+                  <td className="px-4 py-3 font-medium">{code.type}</td>
+                  <td className="px-4 py-3 font-mono">{code.value}</td>
+                  {isAdmin && (
                     <td className="px-4 py-3 text-center">
-                      {isAdmin ? (
-                        <>
-                          <button
-                            onClick={() => startEdit(code)}
-                            className="text-blue-600 hover:text-blue-800 mr-3 text-sm font-medium"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(code.id)}
-                            className="text-red-500 hover:text-red-700 text-sm font-medium"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-gray-400 text-sm">View only</span>
-                      )}
+                      <button
+                        onClick={() => startEdit(code)}
+                        className="text-blue-600 hover:text-blue-800 mr-3 text-sm font-medium"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(code.id)}
+                        className="text-red-500 hover:text-red-700 text-sm font-medium"
+                      >
+                        Delete
+                      </button>
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))
-      )}
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

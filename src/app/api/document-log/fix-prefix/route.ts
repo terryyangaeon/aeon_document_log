@@ -5,7 +5,9 @@ export async function POST() {
   const session = await requireAdmin();
   if (!session) return Response.json({ error: "Forbidden" }, { status: 403 });
 
-  const prefix = await prisma.systemCode.findFirst({ where: { type: "PREFIX" } });
+  const prefix = await prisma.systemCode.findFirst({
+    where: { type: { equals: "PREFIX", mode: "insensitive" } },
+  });
   if (!prefix) {
     return Response.json({ error: "No PREFIX configured in system codes" }, { status: 400 });
   }

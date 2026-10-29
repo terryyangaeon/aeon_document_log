@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
 
-  const where = type ? { type } : {};
+  const where = type ? { type: { equals: type, mode: "insensitive" as const } } : {};
   const codes = await prisma.systemCode.findMany({
     where,
     orderBy: [{ type: "asc" }, { value: "asc" }],
