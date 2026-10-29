@@ -12,6 +12,13 @@ export async function POST() {
     return Response.json({ error: "No PREFIX configured in system codes" }, { status: 400 });
   }
 
+  if (prefix.type !== prefix.type.toUpperCase()) {
+    await prisma.systemCode.update({
+      where: { id: prefix.id },
+      data: { type: prefix.type.toUpperCase() },
+    });
+  }
+
   const broken = await prisma.documentLog.findMany({
     where: { prefix: "---" },
     include: { sender: true, draftedBy: true },

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const code = await prisma.systemCode.create({
     data: {
-      type: body.type,
+      type: body.type.toUpperCase(),
       value: body.value,
     },
   });
@@ -38,7 +38,7 @@ export async function PUT(request: NextRequest) {
   const code = await prisma.systemCode.update({
     where: { id: body.id },
     data: {
-      type: body.type,
+      type: body.type.toUpperCase(),
       value: body.value,
     },
   });
